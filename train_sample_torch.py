@@ -38,12 +38,11 @@ def main():
         transforms.Normalize((0, 0, 0), tuple(np.sqrt((255, 255, 255)))),
     ])
     train_set = torchvision.datasets.ImageFolder(data_dir / 'train', data_transforms)
+    train_set, val_set = torch.utils.data.random_split(train_set,[8*(len(train_set)//10), 2*(len(train_set)//10)])
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
                                                shuffle=True, num_workers=4, pin_memory=True)
 
     #validation is formatted differently, we need to write code for this
-    train_set, val_set = torch.utils.data.random_split(train_set,[8*(len(train_set)//10), 2*(len(train_set)//10)])
-    
     #val_set = torchvision.datasets.ImageFolder(data_dir / 'val', data_transforms)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=batch_size,
                                                shuffle=True, num_workers=4, pin_memory=True)
@@ -68,9 +67,14 @@ def main():
             y_hat = model(X)
             
             loss = criterion(y_hat, y_true) 
+            #print("\n")
+            #print(y_hat)
+
             
             running_val_loss += loss.item() * X.size(0)
             _, predicted = y_hat.max(1)
+            #print("\n")
+            #print(predicted)
             val_correct += predicted.eq(y_true).sum().item()
             val_total += y_true.size(0)
         val_acc = val_correct / val_total
