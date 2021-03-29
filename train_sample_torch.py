@@ -147,8 +147,8 @@ def main():
         print(f'Epoch: {e+1}\t'
                 f'Train loss: {train_loss:.4f}\t'
                 f'Valid loss: {val_loss:.4f}\t'
-                f'Train accuracy: {train_acc:.2f}\t'
-                f'Valid accuracy: {val_acc:.2f}')
+                f'Train accuracy: {100*train_acc:.4f}\t'
+                f'Valid accuracy: {100*val_acc:.4f}')
         torch.save({
             'net': model.state_dict(),
         }, f'weights/latest_{e}.pt')
