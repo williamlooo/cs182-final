@@ -1,0 +1,8 @@
+.DS_Store
+
+data/tiny-imagenet-200/
+data/tiny-imagenet-200.zip
+
+__pycache__/
+
+weights/*
