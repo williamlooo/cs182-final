@@ -126,7 +126,6 @@ def main():
             optim.step()
 
             running_train_loss += loss.item() * inputs.size(0)
-            train_losses.append(loss.item()*inputs.size(0))
 
             _, predicted = outputs.max(1)
             
@@ -155,8 +154,8 @@ def main():
         }, f'weights/latest_{e}.pt')
     
     #plot training results
-    plt.plot(num_epochs, train_losses, 'g', label='Training loss')
-    plt.plot(num_epochs, val_losses, 'b', label='validation loss')
+    plt.plot(range(num_epochs), train_losses, 'g', label='Training loss')
+    plt.plot(range(num_epochs), val_losses, 'b', label='validation loss')
     plt.title('Training and Validation loss')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
@@ -167,3 +166,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+ 
