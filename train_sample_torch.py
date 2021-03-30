@@ -38,7 +38,7 @@ def main():
         transforms.Normalize((0, 0, 0), tuple(np.sqrt((255, 255, 255)))),
     ])
     train_set = torchvision.datasets.ImageFolder(data_dir / 'train', data_transforms)
-    train_set, val_set = torch.utils.data.random_split(train_set,[8*(len(train_set)//10), 2*(len(train_set)//10)])
+    train_set, val_set = torch.utils.data.random_split(train_set,[80*len(train_set)//100, 20*len(train_set)//100])
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
                                                shuffle=True, num_workers=4, pin_memory=True)
 
@@ -115,7 +115,7 @@ def main():
         running_train_loss = 0
         train_total, train_correct = 0,0
         #every 4 epochs reduce by 10 (e=4, e=8)
-        if e % 4 == 0:
+        if e > 0 and e % 4 == 0:
             curr_lr = optim.param_groups[0]['lr']
             optim.param_groups[0]['lr']  = curr_lr / 10
         

@@ -142,6 +142,8 @@ class Net(nn.Module):
         self.outc = OutConv(64, n_classes)
         #nn.Linear(in_features=1024, out_features=n_classes),
         #nn.Softmax(),
+        #in=230400 if imagesize = 60
+        #in=262144 if imagesize = 64
         self.classifier = nn.Sequential(    
             nn.Linear(in_features=262144, out_features=1024),
             nn.Linear(in_features=1024, out_features=n_classes),
