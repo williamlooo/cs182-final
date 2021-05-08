@@ -14,6 +14,9 @@ from model import Net
 import matplotlib.pyplot as plt
 from torch import nn
 import os
+
+import evaluation_tools
+
 os.environ['CUDA_VISIBLE_DEVICES']='3,4'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -25,31 +28,32 @@ def main():
     print('Discovered {} images'.format(image_count))
 
     # Create the training data generator
-    batch_size = 32
+    batch_size = 64
     im_height = 64
     im_width = 64
-    num_epochs = 10
+    num_epochs = 50
     
     #transforms.RandomResizedCrop(60),
-    data_transforms = transforms.Compose([
+    train_data_transforms = transforms.Compose([
         transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.2),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize((0, 0, 0), tuple(np.sqrt((255, 255, 255)))),
     ])
-    train_set = torchvision.datasets.ImageFolder(data_dir / 'train', data_transforms)
-    train_set, val_set = torch.utils.data.random_split(train_set,[80*len(train_set)//100, 20*len(train_set)//100])
+
+    val_data_transforms = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0, 0, 0), tuple(np.sqrt((255, 255, 255)))),
+    ])
+
+    train_set = torchvision.datasets.ImageFolder(data_dir / 'train', train_data_transforms)
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
                                                shuffle=True, num_workers=4, pin_memory=True)
 
-    #validation is formatted differently, we need to write code for this
-    #val_set = torchvision.datasets.ImageFolder(data_dir / 'val', data_transforms)
+    val_set = torchvision.datasets.ImageFolder(data_dir / 'val-fixed', val_data_transforms)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=batch_size,
                                                shuffle=True, num_workers=4, pin_memory=True)
-    
-    test_dataset = torchvision.datasets.ImageFolder(data_dir / 'test', data_transforms)                                               
-    #metrics
-    #best_loss = 1e10
+
     train_losses = []
     val_losses = []
 
@@ -83,32 +87,10 @@ def main():
         model.train() #switch back to train mode
         return model, val_loss, val_acc
 
-    def evaluate(model):
-        ROW_IMG = 10
-        N_ROWS = 5
-
-        fig = plt.figure()
-        for index in range(1, ROW_IMG * N_ROWS + 1):
-            plt.subplot(N_ROWS, ROW_IMG, index)
-            plt.axis('off')
-            plt.imshow(test_dataset.data[index], cmap='gray_r')
-            
-            with torch.no_grad():
-                model.eval()
-                output = model(test_dataset[index][0].unsqueeze(0))
-                probs = F.softmax(output, dim=1)
-                model.train()
-                
-            title = f'{torch.argmax(probs)} ({torch.max(probs * 100):.0f}%)'
-            
-            plt.title(title, fontsize=7)
-        fig.suptitle('Predictions')
-        plt.savefig("test.png")
-
     # Create a simple model
     model = Net(len(CLASS_NAMES), im_height, im_width).to(device)
     model.train()
-    optim = torch.optim.Adam(model.parameters(),lr=3e-4)
+    optim = torch.optim.Adam(model.parameters(),lr=1e-4)
     criterion = nn.CrossEntropyLoss()
 
     for e in range(num_epochs):
