@@ -103,4 +103,4 @@ def evaluate_model(path, class_names, im_height, im_width):
 if __name__ == "__main__":
     data_dir = pathlib.Path('./data/tiny-imagenet-200')
     CLASS_NAMES = np.array([item.name for item in (data_dir / 'train').glob('*')])
-    evaluate_model("weights/latest_20.pt", CLASS_NAMES, 64,64)
+    evaluate_model("weights/latest_0.pt", CLASS_NAMES, 64,64)

@@ -17,7 +17,7 @@ import os
 
 import evaluation_tools
 
-os.environ['CUDA_VISIBLE_DEVICES']='3,4'
+os.environ['CUDA_VISIBLE_DEVICES']='5,6,7'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def main():
@@ -25,15 +25,15 @@ def main():
     data_dir = pathlib.Path('./data/tiny-imagenet-200')
     image_count = len(list(data_dir.glob('**/*.JPEG')))
     CLASS_NAMES = np.array([item.name for item in (data_dir / 'train').glob('*')])
-    print('Discovered {} images'.format(image_count))
+    print('Discovered {} train images'.format(image_count))
+    print('Training on {} classes'.format(len(CLASS_NAMES)))
 
     # Create the training data generator
-    batch_size = 64
+    batch_size = 4
     im_height = 64
     im_width = 64
-    num_epochs = 50
-    
-    #transforms.RandomResizedCrop(60),
+    num_epochs = 30
+
     train_data_transforms = transforms.Compose([
         transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.2),
         transforms.RandomHorizontalFlip(),
@@ -49,11 +49,11 @@ def main():
     train_set = torchvision.datasets.ImageFolder(data_dir / 'train', train_data_transforms)
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
                                                shuffle=True, num_workers=4, pin_memory=True)
-
+    print(f"train set size: {len(train_set)}")
     val_set = torchvision.datasets.ImageFolder(data_dir / 'val-fixed', val_data_transforms)
-    val_loader = torch.utils.data.DataLoader(val_set, batch_size=batch_size,
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size=200,
                                                shuffle=True, num_workers=4, pin_memory=True)
-
+    print(f"val set size: {len(val_set)}")
     train_losses = []
     val_losses = []
 
@@ -90,14 +90,14 @@ def main():
     # Create a simple model
     model = Net(len(CLASS_NAMES), im_height, im_width).to(device)
     model.train()
-    optim = torch.optim.Adam(model.parameters(),lr=1e-4)
+    optim = torch.optim.Adam(model.parameters(),lr=1e-4, weight_decay=1e-5)
     criterion = nn.CrossEntropyLoss()
 
     for e in range(num_epochs):
         running_train_loss = 0
         train_total, train_correct = 0,0
         #every 4 epochs reduce by 10 (e=4, e=8)
-        if e > 0 and e % 4 == 0:
+        if e > 5 and e % 4 == 0:
             curr_lr = optim.param_groups[0]['lr']
             optim.param_groups[0]['lr']  = curr_lr / 10
         
@@ -148,8 +148,10 @@ def main():
     plt.legend()
     plt.savefig('plot.png')
 
-    evaluate(model)
-
+    #evaluation on the test set
+    evaluation_tools.evaluate_model(f'weights/latest_{e}.pt', CLASS_NAMES, im_height, im_width)
+    
+    exit(0)
 if __name__ == '__main__':
     main()
  
