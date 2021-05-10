@@ -10,15 +10,18 @@ import numpy as np
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from model import Net
+from model import ResNetUNet, Net
 import matplotlib.pyplot as plt
 from torch import nn
+import torch.nn.functional as F
 import os
 
 import evaluation_tools
 
-os.environ['CUDA_VISIBLE_DEVICES']='5,6,7'
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ['CUDA_VISIBLE_DEVICES']='5'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+torch.cuda.memory_summary(device=None, abbreviated=False)
 
 def main():
     # Create a pytorch dataset
@@ -29,10 +32,10 @@ def main():
     print('Training on {} classes'.format(len(CLASS_NAMES)))
 
     # Create the training data generator
-    batch_size = 4
+    batch_size = 128
     im_height = 64
     im_width = 64
-    num_epochs = 30
+    num_epochs = 10
 
     train_data_transforms = transforms.Compose([
         transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.2),
@@ -69,12 +72,7 @@ def main():
 
             # Forward pass and record loss
             y_hat = model(X)
-            
-            loss = criterion(y_hat, y_true) 
-            #print("\n")
-            #print(y_hat)
-
-            
+            loss = criterion(y_hat, y_true)
             running_val_loss += loss.item() * X.size(0)
             _, predicted = y_hat.max(1)
             #print("\n")
@@ -87,11 +85,14 @@ def main():
         model.train() #switch back to train mode
         return model, val_loss, val_acc
 
-    # Create a simple model
-    model = Net(len(CLASS_NAMES), im_height, im_width).to(device)
+    # Create the model
+    #model = Net(len(CLASS_NAMES), im_height, im_width).to(device)
+    model = ResNetUNet(len(CLASS_NAMES)).to(device)
     model.train()
     optim = torch.optim.Adam(model.parameters(),lr=1e-4, weight_decay=1e-5)
     criterion = nn.CrossEntropyLoss()
+    path = "./weights/latest_9.pt"
+    #model.load_state_dict(torch.load(path), strict=True)
 
     for e in range(num_epochs):
         running_train_loss = 0
@@ -107,13 +108,21 @@ def main():
 
             optim.zero_grad()
             outputs = model(inputs)
+            #print("=======INPUTS=======")
+            #print(targets.shape)
+            #print(f"\noutputs: {outputs}")
+            #print(f"\ntargets: {targets}")
             loss = criterion(outputs,targets)
+            
             loss.backward()
             optim.step()
 
             running_train_loss += loss.item() * inputs.size(0)
 
             _, predicted = outputs.max(1)
+            if e == 5 or e == 9:
+                print(f"\npredicted label: {predicted}")
+                print(f"\ntarget labels: {targets}")
             
             train_total += targets.size(0)
             
@@ -135,9 +144,7 @@ def main():
                 f'Valid loss: {val_loss:.4f}\t'
                 f'Train accuracy: {100*train_acc:.4f}\t'
                 f'Valid accuracy: {100*val_acc:.4f}')
-        torch.save({
-            'net': model.state_dict(),
-        }, f'weights/latest_{e}.pt')
+        torch.save(model.state_dict(), f'weights/latest_{e}.pt')
     
     #plot training results
     plt.plot(range(num_epochs), train_losses, 'g', label='Training loss')

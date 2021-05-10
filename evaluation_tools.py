@@ -4,7 +4,7 @@ import torchvision
 import skimage
 from skimage import io
 import os
-from model import Net
+from model import ResNetUNet, Net
 import pathlib
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
@@ -42,8 +42,9 @@ def evaluate_model(path, class_names, im_height, im_width):
 
     #load model
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = Net(len(class_names), im_height, im_width)#.to(device)
-    model.load_state_dict(torch.load(path), strict=False)
+    #model = Net(len(class_names), im_height, im_width)#.to(device)
+    model = ResNetUNet(len(class_names))
+    model.load_state_dict(torch.load(path), strict=True)
     model.eval()
 
     transform = transforms.Compose([
@@ -81,12 +82,11 @@ def evaluate_model(path, class_names, im_height, im_width):
             with torch.no_grad():
                 output = model(input)
                 probs = F.softmax(output, dim=1)
+                #print(probs)
                 _, predicted = probs.max(1)
-                print(torch.argmax(probs))
-
-                print(predicted)
+                #print(predicted)
                 idx = predicted.numpy()
-                label = CLASS_NAMES[idx][0]
+                label = class_names[idx][0]
                 translated_label = id_to_word_dict[label] if label in id_to_word_dict else "UNKNOWN"
                 print(translated_label)
 
@@ -103,4 +103,4 @@ def evaluate_model(path, class_names, im_height, im_width):
 if __name__ == "__main__":
     data_dir = pathlib.Path('./data/tiny-imagenet-200')
     CLASS_NAMES = np.array([item.name for item in (data_dir / 'train').glob('*')])
-    evaluate_model("weights/latest_0.pt", CLASS_NAMES, 64,64)
+    evaluate_model("./weights/latest_6.pt", CLASS_NAMES, 64,64)
