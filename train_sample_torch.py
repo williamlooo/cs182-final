@@ -188,11 +188,11 @@ def main():
         return loss
 
     #plot training results
-    def plot_training(num_epochs, train_losses, val_losses, train_accuracies, val_accuracies):
+    def plot_training(train_losses, val_losses, train_accuracies, val_accuracies):
         #plot training and validation losses
         plt.figure()
-        plt.plot(range(num_epochs), train_losses, 'g', label='Training loss')
-        plt.plot(range(num_epochs), val_losses, 'b', label='validation loss')
+        plt.plot(range(len(train_losses)), train_losses, 'g', label='Training loss')
+        plt.plot(range(len(train_losses)), val_losses, 'b', label='validation loss')
         plt.title('Training and Validation loss')
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
@@ -202,8 +202,8 @@ def main():
         
         #plot training and validation accuracies
         plt.figure()
-        plt.plot(range(num_epochs), train_accuracies, 'g', label='Training acc')
-        plt.plot(range(num_epochs), val_accuracies, 'b', label='validation acc')
+        plt.plot(range(len(train_losses)), train_accuracies, 'g', label='Training acc')
+        plt.plot(range(len(train_losses)), val_accuracies, 'b', label='validation acc')
         plt.title('Training and Validation accuracy')
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy (%)')
@@ -270,7 +270,7 @@ def main():
         train_accuracies.append(100*train_acc)
         val_accuracies.append(100*val_acc)
         torch.save(model.state_dict(), f'{CHECKPOINTS_DIR}/latest_{e}.pt')
-        plot_training(num_epochs, train_losses, val_losses, train_accuracies, val_accuracies)
+        plot_training(train_losses, val_losses, train_accuracies, val_accuracies)
 
     #evaluation on the test set
     evaluation_tools.evaluate_model(f'{CHECKPOINTS_DIR}/latest_{e}.pt', CLASS_NAMES, index_to_class_dict, im_height, im_width)
