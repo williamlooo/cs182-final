@@ -45,11 +45,11 @@ def main():
     im_width = 64
     num_epochs = 20
     INIT_LR = 1e-4
-    USE_CES_LOSS = True
-    CHECKPOINTS_DIR = "./weights/ces_loss"
+    USE_CES_LOSS = False
+    CHECKPOINTS_DIR = "./weights/ce_loss"
     if not os.path.isdir(CHECKPOINTS_DIR):
         os.mkdir(CHECKPOINTS_DIR)
-    PLOT_PATH = "ces_plot.png"
+    PLOT_PATH = "ce_plot.png"
 
     # Create a pytorch dataset
     data_dir = pathlib.Path('./data/tiny-imagenet-200')
@@ -192,7 +192,7 @@ def main():
         #plot training and validation losses
         plt.figure()
         plt.plot(range(len(train_losses)), train_losses, 'g', label='Training loss')
-        plt.plot(range(len(train_losses)), val_losses, 'b', label='validation loss')
+        plt.plot(range(len(val_losses)), val_losses, 'b', label='validation loss')
         plt.title('Training and Validation loss')
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
@@ -202,8 +202,8 @@ def main():
         
         #plot training and validation accuracies
         plt.figure()
-        plt.plot(range(len(train_losses)), train_accuracies, 'g', label='Training acc')
-        plt.plot(range(len(train_losses)), val_accuracies, 'b', label='validation acc')
+        plt.plot(range(len(train_accuracies)), train_accuracies, 'g', label='Training acc')
+        plt.plot(range(len(val_accuracies)), val_accuracies, 'b', label='validation acc')
         plt.title('Training and Validation accuracy')
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy (%)')
