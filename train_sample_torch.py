@@ -30,7 +30,7 @@ except RuntimeError:
 #our stuff
 import evaluation_tools
 from model import ResNetUNet, Net
-from custom_augmentations import RandomGaussianBlur
+from custom_augmentations import RandomGaussianBlur, RandomSaltAndPepperNoise
 
 #GPU setup
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
@@ -61,6 +61,7 @@ def main():
     # Create the training data generator
     train_data_transforms = transforms.Compose([
         transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.2),
+        RandomSaltAndPepperNoise(rate=0.1,noiseType="RGB"),
         RandomGaussianBlur(),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
