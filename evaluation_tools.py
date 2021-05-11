@@ -98,8 +98,6 @@ def evaluate_model(path, class_names, index_to_class_dict , im_height, im_width)
             break
     fig.suptitle('Predictions')
     plt.savefig("results.png") 
-        
-
 
 if __name__ == "__main__":
     data_dir = pathlib.Path('./data/tiny-imagenet-200')
@@ -109,4 +107,4 @@ if __name__ == "__main__":
     with open('index_to_class_dict.p', 'rb') as f:
         index_to_class_dict = pickle.load(f)
 
-    evaluate_model("./weights/latest_6.pt", CLASS_NAMES, index_to_class_dict, 64,64)
+    evaluate_model("./weights/standard.pt", CLASS_NAMES, index_to_class_dict, 64,64)
