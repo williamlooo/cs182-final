@@ -11,6 +11,7 @@ from typing import Tuple
 from torch.utils.tensorboard import SummaryWriter
 from numpy import ndarray
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def save_model_checkpoint(path: str, model: Module, optimizer=None) -> None:
     """
