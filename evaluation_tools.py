@@ -49,10 +49,11 @@ def evaluate_model(path, class_names, index_to_class_dict , im_height, im_width)
     model.eval()
 
     transform = transforms.Compose([
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Normalize((0, 0, 0), tuple(np.sqrt((255, 255, 255)))),
     ])
     test_dataset = EvalDataset(transform=transform)
-    test_dataloader = DataLoader(test_dataset, batch_size=1,shuffle=True, num_workers=4)
+    test_dataloader = DataLoader(test_dataset, batch_size=1,shuffle=False, num_workers=4)
 
     #load word dict
     class_id_to_word_dict = {}
@@ -61,21 +62,21 @@ def evaluate_model(path, class_names, index_to_class_dict , im_height, im_width)
         parts = line.strip().split('\t')
         assert len(parts) == 2
         class_id_to_word_dict[parts[0]] = parts[1]
+    #plots the number of the ten worst classes along with # of misclassifications
+    plot_ten_worst_classes(model, index_to_class_dict, class_id_to_word_dict)
 
     #run data
     fig = plt.figure(figsize=(16, 12), dpi=80)
     
     for index, sample_batched in enumerate(test_dataloader):
-        print(sample_batched["img"].shape)
         input = sample_batched["img"]
         ROW_IMG = 10
         N_ROWS = 5
         if index+1 < ROW_IMG * N_ROWS + 1:
             plt.subplot(N_ROWS, ROW_IMG, index+1)
             plt.axis('off')
-            
+
             img_path = sample_batched["img_path"][0]
-            print(img_path)
             img = io.imread(img_path)
             img = skimage.color.gray2rgb(img)
             plt.imshow(img, cmap='gray_r')
@@ -99,6 +100,42 @@ def evaluate_model(path, class_names, index_to_class_dict , im_height, im_width)
     fig.suptitle('Predictions')
     plt.savefig("results.png") 
 
+def plot_ten_worst_classes(model, index_to_class_dict, class_id_to_word_dict):
+    from collections import defaultdict
+    correctness_map = defaultdict(lambda: 0)
+    val_data_transforms = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0, 0, 0), tuple(np.sqrt((255, 255, 255)))),
+    ])
+    val_set = torchvision.datasets.ImageFolder(data_dir / 'val-fixed', val_data_transforms)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size=200,
+                                            shuffle=True, num_workers=4, pin_memory=True)
+    model.eval() #switch to eval mode
+    
+    for X, y_true in val_loader:
+        # Forward pass and record loss
+        y_hat = model(X)
+        probs = F.softmax(y_hat, dim=1)
+        _, predicted = probs.max(1)
+        correctness = predicted.eq(y_true)
+        for i in range(len(predicted)):
+            if not correctness.numpy()[i]:
+                label = index_to_class_dict[y_true.numpy()[i]]
+                translated_label = class_id_to_word_dict[label] if label in class_id_to_word_dict else "UNKNOWN"
+                correctness_map[translated_label[:10]]+=1 
+
+    worst_ten_classes = sorted(correctness_map.items(), key=lambda t: t[1], reverse=True)[:10]
+    print(worst_ten_classes)
+    worst_ten_class_names = [a[0] for a in worst_ten_classes]
+    worst_ten_class_values = [a[1] for a in worst_ten_classes]
+    plt.figure(figsize=(16, 12), dpi=80)
+    plt.bar(worst_ten_class_names, worst_ten_class_values)
+    plt.title('10 Most Difficult Classes')
+    plt.xlabel('Class names')
+    plt.ylabel('Misclassifications')
+    plt.savefig("hist.png")
+    plt.close()
+
 if __name__ == "__main__":
     data_dir = pathlib.Path('./data/tiny-imagenet-200')
     CLASS_NAMES = np.array([item.name for item in (data_dir / 'train').glob('*')])
@@ -107,4 +144,4 @@ if __name__ == "__main__":
     with open('index_to_class_dict.p', 'rb') as f:
         index_to_class_dict = pickle.load(f)
 
-    evaluate_model("./weights/standard.pt", CLASS_NAMES, index_to_class_dict, 64,64)
+    evaluate_model("./weights/ces_loss/latest_11.pt", CLASS_NAMES, index_to_class_dict, 64,64)
