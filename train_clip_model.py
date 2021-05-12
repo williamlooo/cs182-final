@@ -3,18 +3,13 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-import torchvision
-from torchvision import datasets, models
+from torchvision import datasets
 from torchvision.transforms import *
 
 import numpy as np
-import matplotlib.pyplot as plt
 import time
-import os
-import copy
 import wandb
 import argparse
-from math import sqrt
 
 from utils.util import *
 from utils.model_io import *

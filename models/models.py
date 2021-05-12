@@ -50,11 +50,12 @@ class Classifier(nn.Module):
         self.l4 = nn.Linear(latent_dim, num_classes)
 
     def forward(self, x):
+        x = x.view(x.shape[0], -1)
         x = f.relu(self.l1(x))
         x = f.relu(self.l2(x))
         x = f.relu(self.l3(x))
         x = self.l4(x)
-        return x
+        return x, 0
 
 class ClipStudent(nn.Module):
     def __init__(self, latent_dim, num_classes, device=None):
@@ -87,6 +88,54 @@ class ClipStudent(nn.Module):
         loss = self.feature_loss(features, clip_features)
         loss = torch.sum(torch.abs(loss))
         
-        preds = self.classifier(features)
+        preds, _ = self.classifier(features)
         return preds, loss
 
+class ClipOnly(nn.Module):
+    def __init__(self, num_classes):
+        super(ClipOnly, self).__init__()
+        self.classifier = Classifier(512, 256, num_classes)
+    
+    def forward(self, x):
+        transform = transforms.ToPILImage()
+        image_features = []
+
+        with torch.no_grad():
+            for i in range(x.shape[0]):
+                t_img = preprocess(transform(x[i, ...].squeeze())).unsqueeze(0)
+                image_features.append(clip_model.encode_image(t_img))
+
+        image_features = torch.cat(image_features)
+        image_features = image_features.detach().float()
+        return self.classifier(image_features)
+
+class ClipFeatureStudent(nn.Module):
+    def __init__(self, latent_dim, device=None):
+        super(ClipFeatureStudent, self).__init__()
+
+        if not device:
+            device = DEVICE
+
+        self.encoder = Encoder(latent_dim)
+        self.feature_loss = nn.CosineSimilarity(dim=1, eps=1e-08)
+
+    def clip_features(self, x):
+        transform = transforms.ToPILImage()
+        image_features = []
+
+        with torch.no_grad():
+            for i in range(x.shape[0]):
+                t_img = preprocess(transform(x[i, ...].squeeze())).unsqueeze(0)
+                image_features.append(clip_model.encode_image(t_img))
+
+        image_features = torch.cat(image_features)
+        return image_features
+
+    def forward(self, x):
+        features = self.encoder(x)
+        clip_features = self.clip_features(x)
+
+        loss = self.feature_loss(features, clip_features)
+        loss = torch.sum(torch.abs(loss))
+        
+        return None, loss
