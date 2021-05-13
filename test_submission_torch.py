@@ -14,7 +14,7 @@ def main():
     im_height, im_width = 64, 64
 
     model = ResNetUNet(len(CLASSES))
-    model.load_state_dict(torch.load("./weights/ce_loss/latest_19.pt"), strict=True)
+    model.load_state_dict(torch.load("./weights/best/ces_weights.pt"), strict=True)
     model.eval()
 
     data_transforms = transforms.Compose([
