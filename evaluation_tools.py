@@ -53,7 +53,7 @@ def evaluate_model(path, class_names, index_to_class_dict , im_height, im_width)
         transforms.Normalize((0, 0, 0), tuple(np.sqrt((255, 255, 255)))),
     ])
     test_dataset = EvalDataset(transform=transform)
-    test_dataloader = DataLoader(test_dataset, batch_size=1,shuffle=False, num_workers=4)
+    test_dataloader = DataLoader(test_dataset, batch_size=1,shuffle=True, num_workers=4)
 
     #load word dict
     class_id_to_word_dict = {}
@@ -65,13 +65,16 @@ def evaluate_model(path, class_names, index_to_class_dict , im_height, im_width)
     #plots the number of the ten worst classes along with # of misclassifications
     plot_ten_worst_classes(model, index_to_class_dict, class_id_to_word_dict)
 
-    #run data
+    #evaluates the distances for incorrect
+    #evaluate_word2vec_similarities(model, index_to_class_dict, class_id_to_word_dict)
+
+    #run test data
     fig = plt.figure(figsize=(16, 12), dpi=80)
     
     for index, sample_batched in enumerate(test_dataloader):
         input = sample_batched["img"]
-        ROW_IMG = 10
-        N_ROWS = 5
+        ROW_IMG = 3
+        N_ROWS = 2
         if index+1 < ROW_IMG * N_ROWS + 1:
             plt.subplot(N_ROWS, ROW_IMG, index+1)
             plt.axis('off')
@@ -94,7 +97,7 @@ def evaluate_model(path, class_names, index_to_class_dict , im_height, im_width)
 
                 title = f'{translated_label[:10]} ({torch.max(probs * 100):.0f}%)'
 
-            plt.title(title, fontsize=7)
+            plt.title(title, fontsize=20)
         else:
             break
     fig.suptitle('Predictions')
@@ -124,17 +127,71 @@ def plot_ten_worst_classes(model, index_to_class_dict, class_id_to_word_dict):
                 translated_label = class_id_to_word_dict[label] if label in class_id_to_word_dict else "UNKNOWN"
                 correctness_map[translated_label[:10]]+=1 
 
-    worst_ten_classes = sorted(correctness_map.items(), key=lambda t: t[1], reverse=True)[:10]
+    worst_ten_classes = sorted(correctness_map.items(), key=lambda t: t[1], reverse=True)[:5]
     print(worst_ten_classes)
     worst_ten_class_names = [a[0] for a in worst_ten_classes]
     worst_ten_class_values = [a[1] for a in worst_ten_classes]
     plt.figure(figsize=(16, 12), dpi=80)
+    plt.rc('axes', titlesize=20)     # fontsize of the axes title
+    plt.rc('xtick', labelsize=20)    # fontsize of the tick labels
+    plt.rc('axes', labelsize=20)    # fontsize of the x and y labels
     plt.bar(worst_ten_class_names, worst_ten_class_values)
-    plt.title('10 Most Difficult Classes')
+    plt.title('5 Most Difficult Classes')
     plt.xlabel('Class names')
     plt.ylabel('Misclassifications')
     plt.savefig("hist.png")
     plt.close()
+
+#helper for evaluating similarities
+def condense_label(input_string, nlp):
+    synonyms = input_string.split(',')
+    #grabs default word (assuming everything in front are adjectives), very hacky, not ideal
+    picked = synonyms[0].split(' ')[-1].strip() 
+    for synonym in synonyms:
+        #chooses first word that contains no spaces and is within the nlp vocabulary
+        synonym = synonym.strip() #get rid of extra spacing around the word
+        if not ' ' in synonym and not nlp(synonym)[0].is_oov:
+            picked = synonym
+            break
+    return picked
+
+def evaluate_word2vec_similarities(model, index_to_class_dict, class_id_to_word_dict):
+    import spacy
+    nlp = spacy.load('en_core_web_md')
+    print("nlp loaded.")
+
+    val_data_transforms = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0, 0, 0), tuple(np.sqrt((255, 255, 255)))),
+    ])
+    val_set = torchvision.datasets.ImageFolder(data_dir / 'val-fixed', val_data_transforms)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size=200,
+                                            shuffle=True, num_workers=4, pin_memory=True)
+    model.eval() #switch to eval mode
+    
+    for X, y_true in val_loader:
+        # Forward pass and record loss
+        distances = []
+        y_hat = model(X)
+        probs = F.softmax(y_hat, dim=1)
+        _, predicted = probs.max(1)
+        correctness = predicted.eq(y_true)
+        for i in range(len(predicted)):
+            if not correctness.numpy()[i]:
+                #if correctness is false, prediction is wrong
+                true = y_true.numpy()[i]
+                pred = predicted.numpy()[i]
+                predicted_label = index_to_class_dict[pred]
+                true_label = index_to_class_dict[true]
+                translated_true_label = class_id_to_word_dict[true_label] if true_label in class_id_to_word_dict else "UNKNOWN"
+                translated__predicted_label = class_id_to_word_dict[predicted_label] if predicted_label in class_id_to_word_dict else "UNKNOWN"
+                condensed_truth = condense_label(translated_true_label,nlp)
+                condensed_prediction = condense_label(translated__predicted_label,nlp)
+                dist = nlp(condensed_prediction)[0].similarity(nlp(condensed_truth)[0])
+                distances.append(dist)
+    print(f"averaged nlp distance for incorrect labels: {np.mean(distances)} for {len(distances)} misclassified labels")
+    #0.3139 fr CES for 91 misclassified labels
+    #0.3530 fr CE for 107 misclassified labels
 
 if __name__ == "__main__":
     data_dir = pathlib.Path('./data/tiny-imagenet-200')
@@ -144,4 +201,4 @@ if __name__ == "__main__":
     with open('index_to_class_dict.p', 'rb') as f:
         index_to_class_dict = pickle.load(f)
 
-    evaluate_model("./weights/ces_loss/latest_11.pt", CLASS_NAMES, index_to_class_dict, 64,64)
+    evaluate_model("./weights/best/ces_weights.pt", CLASS_NAMES, index_to_class_dict, 64,64)

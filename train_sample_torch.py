@@ -22,10 +22,6 @@ import torch.nn.functional as F
 from torch import nn
 import torchvision
 import torchvision.transforms as transforms
-try:
-    torch.multiprocessing.set_start_method('spawn')
-except RuntimeError:
-    pass
 
 #our stuff
 import evaluation_tools
@@ -38,18 +34,19 @@ os.environ['CUDA_VISIBLE_DEVICES']='0'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def main():
-    #regular train: train loss: 0.7283, val loss: 1.8809, train acc: 74.9140, val acc: 50.3200
+    #regular train: train loss: 0.9244, val loss: 1.7809, train acc: 69.1650, val acc: 51.2300 on 20 epochs
+    #w/ces: train loss: 0.6905, val loss: 1.9986, train acc: 77.2250, val acc: 50.9800 on 12 epochs
     #set params
     batch_size = 128
     im_height = 64
     im_width = 64
     num_epochs = 20
     INIT_LR = 1e-4
-    USE_CES_LOSS = False
-    CHECKPOINTS_DIR = "./weights/ce_loss"
+    USE_CES_LOSS = True
+    CHECKPOINTS_DIR = "./weights/"
     if not os.path.isdir(CHECKPOINTS_DIR):
         os.mkdir(CHECKPOINTS_DIR)
-    PLOT_PATH = "ce_plot.png"
+    PLOT_PATH = "ces_plot.png"
 
     # Create a pytorch dataset
     data_dir = pathlib.Path('./data/tiny-imagenet-200')
@@ -172,18 +169,12 @@ def main():
             #condense labels for nlp
             condensed_predicted_labels = condense_label_groups(predicted_labels)
             condensed_ground_truth_labels = condense_label_groups(ground_truth_labels)
-            #print(predicted_labels,"\n")
-            #print(ground_truth_labels,"\n")
-            #print(condensed_predicted_labels,"\n")
-            #print(condensed_ground_truth_labels,"\n")
 
             #take averaged similarity score among all words, np.clip is used because of floating point imprecisions
             similarities = [np.clip(nlp(condensed_predicted_labels[i])[0].similarity(nlp(condensed_ground_truth_labels[i])[0]),0,1) for i in range(len(condensed_ground_truth_labels))]
             mean_similarity_score = np.mean(np.array(similarities).astype(np.float32))
-            #print(mean_similarity_score)
 
             label_similarity_loss = 1-mean_similarity_score
-            #print(label_similarity_loss)
         
         loss = (CE_weight*CE_loss) + (similarity_weight*label_similarity_loss)
         return loss
@@ -218,8 +209,10 @@ def main():
     model.train()
     optim = torch.optim.Adam(model.parameters(),lr=INIT_LR, weight_decay=1e-5)
     criterion = CES_loss_function
-    #path = "./weights/latest_6.pt"
-    #model.load_state_dict(torch.load(path), strict=True)
+
+    #PRELOAD WEIGHTS
+    path = "./weights/best/ces_weights.pt"
+    model.load_state_dict(torch.load(path), strict=True)
 
     #MAIN TRAINING LOOP
     for e in range(num_epochs):
@@ -277,5 +270,9 @@ def main():
     evaluation_tools.evaluate_model(f'{CHECKPOINTS_DIR}/latest_{e}.pt', CLASS_NAMES, index_to_class_dict, im_height, im_width)
     exit(0)
 if __name__ == '__main__':
+    try:
+        torch.multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        pass
     main()
  
