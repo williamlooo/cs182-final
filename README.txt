@@ -13,7 +13,17 @@ data/get_data.sh - A script which will download the tiny-imagenet data into the 
 Note: You should be using Python 3 to run this code.
 
 
-To run inferences first install dependencies through `pip3 install -r requirements.txt`, and then run script: `python3 test_submission.py eval.csv`.
+To run inferences first install dependencies through `pip3 install -r requirements.txt`, 
+and then run script: `python3 test_submission.py eval.csv`.
 
-TODO
-add clip dependencies
+Training is relatively straightforward as well. 
+
+Please do the following from the directory this file is in:
+`pip3 install -r requirements.txt` if you haven't already.
+Then run the data downloading script `./data/get_data.sh`
+Then conform the validation dataset: `python3 conform_validation_set.py`. A folder called val-fixed will be created
+Finally, run `python3 train_sample_torch.py`
+
+
+Validation of the data is easy too:
+`python3 evaluation_tools.py`
