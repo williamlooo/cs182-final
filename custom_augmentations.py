@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from PIL import Image, ImageEnhance
+from PIL import Image
 
 class RandomGaussianBlur(object):
     """
@@ -17,10 +17,15 @@ class RandomGaussianBlur(object):
             random_filter_dim = np.random.randint(0, 3) 
             #to avoid shifting, kernel dimensions have to be odd, so if 2 is sampled, kernel is set to (3,3): 
             # https://stackoverflow.com/questions/52348769/what-if-the-filter-window-size-is-an-even-number-in-gaussian-filtering
-            kernel = (random_filter_dim,random_filter_dim) if random_filter_dim % 2 == 1 else (random_filter_dim+1,random_filter_dim+1)
+            kernel = (random_filter_dim,random_filter_dim) if random_filter_dim == 0 or random_filter_dim % 2 == 1 else (random_filter_dim+1,random_filter_dim+1)
         else:
             kernel = self.kernel
-        blur_img = cv2.GaussianBlur(img.copy(), kernel, self.stdX)
+
+        if kernel == (0,0):
+            #do nothing
+            blur_img = img
+        else:
+            blur_img = cv2.GaussianBlur(img.copy(), kernel, self.stdX)
         return Image.fromarray(blur_img)
     def __repr__(self):
         return self.__class__.__name__+'()'
@@ -57,10 +62,9 @@ class RandomSaltAndPepperNoise(object):
         self.threshold = threshold
         self.lowerValue = lowerValue # 255 would be too high
         self.upperValue = upperValue # 0 would be too low
-        if (noiseType != "RGB") and (noiseType != "SnP"):
-            raise Exception("'noiseType' not of value {'SnP', 'RGB'}")
-        else:
-            self.noiseType = noiseType
+        self.noiseType = noiseType
+        if self.noiseType != "RGB":
+            print("warning, only RGB noise supported.")
         super(RandomSaltAndPepperNoise).__init__()
 
     def __call__(self, img):
@@ -68,14 +72,9 @@ class RandomSaltAndPepperNoise(object):
             img = np.array(img)
             if type(img) != np.ndarray:
                 raise TypeError("Image is not of type 'np.ndarray'!")
-            if self.noiseType == "SnP":
-                random_matrix = np.random.rand(img.shape[0],img.shape[1])
-                img[random_matrix>=(1-self.threshold)] = self.upperValue
-                img[random_matrix<=self.threshold] = self.lowerValue
-            elif self.noiseType == "RGB":
-                random_matrix = np.random.random(img.shape)      
-                img[random_matrix>=(1-self.threshold)] = self.upperValue
-                img[random_matrix<=self.threshold] = self.lowerValue
+            random_matrix = np.random.random(img.shape)      
+            img[random_matrix>=(1-self.threshold)] = self.upperValue
+            img[random_matrix<=self.threshold] = self.lowerValue
             return PIL.Image.fromarray(img)
 
         return img
