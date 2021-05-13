@@ -5,7 +5,6 @@ portions of the code. We provide this model in order to test the full pipeline,
 and to validate your own code submission.
 """
 #typical stuff
-import cupy as cp
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -211,8 +210,8 @@ def main():
     criterion = CES_loss_function
 
     #PRELOAD WEIGHTS
-    path = "./weights/best/ces_weights.pt"
-    model.load_state_dict(torch.load(path), strict=True)
+    #path = "./weights/best/ces_weights.pt"
+    #model.load_state_dict(torch.load(path), strict=True)
 
     #MAIN TRAINING LOOP
     for e in range(num_epochs):
