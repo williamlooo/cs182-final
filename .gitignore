@@ -6,3 +6,10 @@ data/tiny-imagenet-200.zip
 __pycache__/
 
 weights/*
+
+wandb/*
+clip_env/*
+
+.gitignore
+
+index_to_class_dict.p

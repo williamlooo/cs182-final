@@ -3,8 +3,8 @@ import os
 from collections import defaultdict
 dataset = []
 class_count = defaultdict()
-root_dir = "/home/wloo/cs182-final/data/tiny-imagenet-200/val/"
-dest_path = "/home/wloo/cs182-final/data/tiny-imagenet-200/val-fixed/"
+root_dir = "data/tiny-imagenet-200/val/"
+dest_path = "data/tiny-imagenet-200/val-fixed/"
 os.mkdir(dest_path)
 file = open(root_dir+'val_annotations.txt', 'r')
 for line in file.readlines():
