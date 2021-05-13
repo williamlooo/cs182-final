@@ -3,9 +3,9 @@ import pathlib
 from PIL import Image
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torchvision.transforms as transforms
-from model import Net
-
+from model import ResNetUNet
 
 def main():
     # Load the classes
@@ -13,9 +13,8 @@ def main():
     CLASSES = sorted([item.name for item in data_dir.glob('*')])
     im_height, im_width = 64, 64
 
-    ckpt = torch.load('latest.pt')
-    model = Net(len(CLASSES), im_height, im_width)
-    model.load_state_dict(ckpt['net'])
+    model = ResNetUNet(len(CLASSES))
+    model.load_state_dict(torch.load("./weights/ce_loss/latest_19.pt"), strict=True)
     model.eval()
 
     data_transforms = transforms.Compose([
@@ -33,12 +32,12 @@ def main():
             with open(image_path, 'rb') as f:
                 img = Image.open(f).convert('RGB')
             img = data_transforms(img)[None, :]
-            outputs = model(img)
-            _, predicted = outputs.max(1)
-
+            y_hat = model(img)
+            probs = F.softmax(y_hat, dim=1)
+            _, predicted = probs.max(1)
             # Write the prediction to the output file
             eval_output_file.write('{},{}\n'.format(image_id, CLASSES[predicted]))
 
-
+#USAGE: python3 test_submission_torch.py eval.py
 if __name__ == '__main__':
     main()
