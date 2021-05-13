@@ -125,6 +125,7 @@ def convreludropout(in_channels, out_channels, kernel, padding):
     )
     
 #unet incorporating resnet weights
+#UNET https://arxiv.org/pdf/1505.04597.pdf
 #bilinear interpolation: https://arxiv.org/pdf/1805.09233.pdf
 #pytorch parts from: https://github.com/usuyama/pytorch-unet/
 class ResNetUNet(nn.Module):
